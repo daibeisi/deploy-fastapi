@@ -1,0 +1,38 @@
+version: '3.8'
+
+services:
+  # FastAPI 应用
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: fastapi-cicd-app
+    image: fastapi-cicd-app:latest
+    ports:
+      - "8000:8000"
+    environment:
+      - APP_ENV=production
+      - LOG_LEVEL=info
+    env_file:
+      - .env
+    volumes:
+      # 开发时可以挂载代码目录实现热重载
+      # - ./app:/app
+      - app-logs:/app/logs
+    restart: unless-stopped
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+volumes:
+  app-logs:
+    driver: local
+
+networks:
+  app-network:
+    driver: bridge
