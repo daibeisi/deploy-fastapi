@@ -62,7 +62,33 @@ pipeline {
             }
         }
         
-        stage('🔍 代码检查') {
+        stage('� Python 环境准备') {
+            steps {
+                script {
+                    echo '准备 Python 虚拟环境...'
+                    sh '''
+                        set -e
+                        
+                        # 查找 python3 路径
+                        PYTHON3_PATH=$(which python3 || echo "/usr/bin/python3")
+                        echo "使用 Python: $PYTHON3_PATH"
+                        $PYTHON3_PATH --version
+                        
+                        # 创建虚拟环境
+                        $PYTHON3_PATH -m venv venv
+                        
+                        # 激活并安装所有检查工具
+                        . venv/bin/activate
+                        pip install -q --upgrade pip
+                        pip install -q flake8 black bandit pytest pytest-cov
+                        
+                        echo "✅ Python 环境准备完成"
+                    '''
+                }
+            }
+        }
+        
+        stage('�🔍 代码检查') {
             parallel {
                 stage('代码规范检查 (Flake8)') {
                     steps {
@@ -71,9 +97,7 @@ pipeline {
                             // 严重错误会导致构建失败
                             def flake8Result = sh(
                                 script: '''
-                                    python3 -m venv venv
                                     . venv/bin/activate
-                                    pip install -q flake8
                                     flake8 app/ --count --select=E9,F63,F7,F82 --show-source --statistics
                                 ''',
                                 returnStatus: true
@@ -94,7 +118,6 @@ pipeline {
                             def blackResult = sh(
                                 script: '''
                                     . venv/bin/activate
-                                    pip install -q black
                                     black --check app/
                                 ''',
                                 returnStatus: true
@@ -114,7 +137,6 @@ pipeline {
                             def banditResult = sh(
                                 script: '''
                                     . venv/bin/activate
-                                    pip install -q bandit
                                     bandit -r app/ -ll -f txt
                                 ''',
                                 returnStatus: true
@@ -141,7 +163,6 @@ pipeline {
                         script: '''
                             . venv/bin/activate
                             pip install -q -r requirements.txt
-                            pip install -q pytest pytest-cov
                             
                             # 创建测试目录
                             mkdir -p tests
