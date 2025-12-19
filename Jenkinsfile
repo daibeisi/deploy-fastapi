@@ -73,8 +73,11 @@ pipeline {
                         if ! command -v uv &> /dev/null; then
                             echo "安装 uv..."
                             curl -LsSf https://astral.sh/uv/install.sh | sh
-                            export PATH="$HOME/.cargo/bin:$PATH"
+                            export PATH="$HOME/.local/bin:$PATH"
                         fi
+                        
+                        # 确保 uv 在 PATH 中
+                        export PATH="$HOME/.local/bin:$PATH"
                         
                         # 显示 uv 版本
                         uv --version
@@ -97,6 +100,7 @@ pipeline {
                             // 严重错误会导致构建失败
                             def flake8Result = sh(
                                 script: '''
+                                    export PATH="$HOME/.local/bin:$PATH"
                                     uv run flake8 app/ --count --select=E9,F63,F7,F82 --show-source --statistics
                                 ''',
                                 returnStatus: true
@@ -116,6 +120,7 @@ pipeline {
                             // Black 格式问题只标记为 unstable，不阻止构建
                             def blackResult = sh(
                                 script: '''
+                                    export PATH="$HOME/.local/bin:$PATH"
                                     uv run black --check app/
                                 ''',
                                 returnStatus: true
@@ -134,6 +139,7 @@ pipeline {
                             // 高危安全问题会导致构建失败
                             def banditResult = sh(
                                 script: '''
+                                    export PATH="$HOME/.local/bin:$PATH"
                                     uv run bandit -r app/ -ll -f txt
                                 ''',
                                 returnStatus: true
@@ -158,6 +164,8 @@ pipeline {
                 script {
                     def testResult = sh(
                         script: '''
+                            export PATH="$HOME/.local/bin:$PATH"
+                            
                             # 创建测试目录
                             mkdir -p tests
                             
