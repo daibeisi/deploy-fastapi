@@ -3,6 +3,7 @@
 # ============================================
 # 提交前代码质量检查脚本
 # 在本地运行所有 CI/CD 中的检查
+# 使用 uv 进行依赖管理
 # ============================================
 
 set -e  # 遇到错误立即退出
@@ -25,10 +26,25 @@ echo "  代码质量检查 - Pre-commit Check"
 echo "============================================"
 echo ""
 
+# 检查 uv 是否安装
+if ! command -v uv &> /dev/null; then
+    echo -e "${YELLOW}未检测到 uv，正在安装...${NC}"
+    curl -LsSf https://astral.sh/uv/install.sh | sh
+    export PATH="$HOME/.cargo/bin:$PATH"
+fi
+
+echo -e "${BLUE}使用 uv 版本: $(uv --version)${NC}"
+echo ""
+
+# 确保依赖已安装
+echo -e "${BLUE}检查依赖...${NC}"
+uv sync --all-extras
+echo ""
+
 # 检查 1: Flake8 代码规范
 echo -e "${BLUE}[1/4]${NC} 运行 Flake8 代码规范检查..."
 TOTAL_CHECKS=$((TOTAL_CHECKS + 1))
-if flake8 app/ --count --select=E9,F63,F7,F82 --show-source --statistics; then
+if uv run flake8 app/ --count --select=E9,F63,F7,F82 --show-source --statistics; then
     echo -e "${GREEN}✓ Flake8 检查通过${NC}"
     PASSED_CHECKS=$((PASSED_CHECKS + 1))
 else
@@ -41,12 +57,12 @@ echo ""
 # 检查 2: Black 代码格式
 echo -e "${BLUE}[2/4]${NC} 运行 Black 代码格式检查..."
 TOTAL_CHECKS=$((TOTAL_CHECKS + 1))
-if black --check app/; then
+if uv run black --check app/; then
     echo -e "${GREEN}✓ Black 格式检查通过${NC}"
     PASSED_CHECKS=$((PASSED_CHECKS + 1))
 else
     echo -e "${YELLOW}⚠ 代码格式不符合规范${NC}"
-    echo -e "${YELLOW}自动修复: black app/${NC}"
+    echo -e "${YELLOW}自动修复: uv run black app/${NC}"
     FAILED_CHECKS=$((FAILED_CHECKS + 1))
 fi
 echo ""
@@ -54,12 +70,12 @@ echo ""
 # 检查 3: Bandit 安全扫描
 echo -e "${BLUE}[3/4]${NC} 运行 Bandit 安全扫描..."
 TOTAL_CHECKS=$((TOTAL_CHECKS + 1))
-if bandit -r app/ -ll -q; then
+if uv run bandit -r app/ -ll -q; then
     echo -e "${GREEN}✓ 安全扫描通过${NC}"
     PASSED_CHECKS=$((PASSED_CHECKS + 1))
 else
     echo -e "${YELLOW}⚠ 发现潜在安全问题${NC}"
-    echo -e "${YELLOW}查看详情: bandit -r app/ -ll${NC}"
+    echo -e "${YELLOW}查看详情: uv run bandit -r app/ -ll${NC}"
     FAILED_CHECKS=$((FAILED_CHECKS + 1))
 fi
 echo ""
@@ -67,13 +83,13 @@ echo ""
 # 检查 4: 单元测试
 echo -e "${BLUE}[4/4]${NC} 运行单元测试..."
 TOTAL_CHECKS=$((TOTAL_CHECKS + 1))
-if pytest tests/ -q; then
+if uv run pytest tests/ -q; then
     echo -e "${GREEN}✓ 单元测试通过${NC}"
     PASSED_CHECKS=$((PASSED_CHECKS + 1))
 else
     echo -e "${RED}✗ 单元测试失败${NC}"
     FAILED_CHECKS=$((FAILED_CHECKS + 1))
-    echo -e "${YELLOW}查看详情: pytest tests/ -v${NC}"
+    echo -e "${YELLOW}查看详情: uv run pytest tests/ -v${NC}"
 fi
 echo ""
 

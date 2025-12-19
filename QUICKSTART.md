@@ -15,22 +15,21 @@ docker-compose logs -f app
 # http://localhost:8000
 ```
 
-### 方式 B: 本地开发
+### 方式 B: 本地开发（使用 uv）
 
 ```bash
-# 创建虚拟环境
-python -m venv venv
+# 安装 uv（如果未安装）
+# Windows
+powershell -c "irm https://astral.sh/uv/install.ps1 | iex"
 
-# 激活虚拟环境
-venv\Scripts\activate  # Windows
-# source venv/bin/activate  # Linux/Mac
+# Linux/macOS
+curl -LsSf https://astral.sh/uv/install.sh | sh
 
-# 安装依赖
-pip install -r requirements.txt
+# 同步依赖
+uv sync --all-extras
 
 # 运行应用
-cd app
-python main.py
+uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
 ## 第二步：验证部署
@@ -87,9 +86,17 @@ docker exec jenkins cat /var/jenkins_home/secrets/initialAdminPassword
 # Windows
 .\scripts\pre-commit-check.ps1
 
-# Linux/Mac
+# Linux/macOS
 ./scripts/pre-commit-check.sh
 ```
+
+这些脚本会运行：
+- ✅ Flake8 代码规范检查
+- ✅ Black 代码格式检查
+- ✅ Bandit 安全扫描
+- ✅ Pytest 单元测试
+
+所有检查使用 `uv run` 执行，无需手动激活虚拟环境。
 
 ### 提交代码
 

@@ -1,5 +1,6 @@
 # ============================================
 # Windows PowerShell 版本的提交前检查脚本
+# 使用 uv 进行依赖管理
 # ============================================
 
 $ErrorActionPreference = "Continue"
@@ -15,11 +16,26 @@ Write-Host "  代码质量检查 - Pre-commit Check" -ForegroundColor Cyan
 Write-Host "============================================" -ForegroundColor Cyan
 Write-Host ""
 
+# 检查 uv 是否安装
+if (!(Get-Command uv -ErrorAction SilentlyContinue)) {
+    Write-Host "未检测到 uv，请安装: https://docs.astral.sh/uv/getting-started/installation/" -ForegroundColor Yellow
+    Write-Host "或者运行: powershell -c \"irm https://astral.sh/uv/install.ps1 | iex\"" -ForegroundColor Yellow
+    exit 1
+}
+
+Write-Host "使用 uv 版本: $(uv --version)" -ForegroundColor Blue
+Write-Host ""
+
+# 确保依赖已安装
+Write-Host "检查依赖..." -ForegroundColor Blue
+uv sync --all-extras
+Write-Host ""
+
 # 检查 1: Flake8
 Write-Host "[1/4] 运行 Flake8 代码规范检查..." -ForegroundColor Blue
 $TotalChecks++
 try {
-    flake8 app/ --count --select=E9,F63,F7,F82 --show-source --statistics
+    uv run flake8 app/ --count --select=E9,F63,F7,F82 --show-source --statistics
     if ($LASTEXITCODE -eq 0) {
         Write-Host "✓ Flake8 检查通过" -ForegroundColor Green
         $PassedChecks++
@@ -37,7 +53,7 @@ Write-Host ""
 Write-Host "[2/4] 运行 Black 代码格式检查..." -ForegroundColor Blue
 $TotalChecks++
 try {
-    black --check app/
+    uv run black --check app/
     if ($LASTEXITCODE -eq 0) {
         Write-Host "✓ Black 格式检查通过" -ForegroundColor Green
         $PassedChecks++
@@ -46,7 +62,7 @@ try {
     }
 } catch {
     Write-Host "⚠ 代码格式不符合规范" -ForegroundColor Yellow
-    Write-Host "自动修复: black app/" -ForegroundColor Yellow
+    Write-Host "自动修复: uv run black app/" -ForegroundColor Yellow
     $FailedChecks++
 }
 Write-Host ""
@@ -55,7 +71,7 @@ Write-Host ""
 Write-Host "[3/4] 运行 Bandit 安全扫描..." -ForegroundColor Blue
 $TotalChecks++
 try {
-    bandit -r app/ -ll -q
+    uv run bandit -r app/ -ll -q
     if ($LASTEXITCODE -eq 0) {
         Write-Host "✓ 安全扫描通过" -ForegroundColor Green
         $PassedChecks++
@@ -64,7 +80,7 @@ try {
     }
 } catch {
     Write-Host "⚠ 发现潜在安全问题" -ForegroundColor Yellow
-    Write-Host "查看详情: bandit -r app/ -ll" -ForegroundColor Yellow
+    Write-Host "查看详情: uv run bandit -r app/ -ll" -ForegroundColor Yellow
     $FailedChecks++
 }
 Write-Host ""
@@ -73,7 +89,7 @@ Write-Host ""
 Write-Host "[4/4] 运行单元测试..." -ForegroundColor Blue
 $TotalChecks++
 try {
-    pytest tests/ -q
+    uv run pytest tests/ -q
     if ($LASTEXITCODE -eq 0) {
         Write-Host "✓ 单元测试通过" -ForegroundColor Green
         $PassedChecks++
@@ -82,7 +98,7 @@ try {
     }
 } catch {
     Write-Host "✗ 单元测试失败" -ForegroundColor Red
-    Write-Host "查看详情: pytest tests/ -v" -ForegroundColor Yellow
+    Write-Host "查看详情: uv run pytest tests/ -v" -ForegroundColor Yellow
     $FailedChecks++
 }
 Write-Host ""

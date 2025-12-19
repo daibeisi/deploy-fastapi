@@ -65,22 +65,22 @@ pipeline {
         stage('� Python 环境准备') {
             steps {
                 script {
-                    echo '准备 Python 虚拟环境...'
+                    echo '准备 uv 环境...'
                     sh '''
                         set -e
                         
-                        # 查找 python3 路径
-                        PYTHON3_PATH=$(which python3 || echo "/usr/bin/python3")
-                        echo "使用 Python: $PYTHON3_PATH"
-                        $PYTHON3_PATH --version
+                        # 安装 uv（如果未安装）
+                        if ! command -v uv &> /dev/null; then
+                            echo "安装 uv..."
+                            curl -LsSf https://astral.sh/uv/install.sh | sh
+                            export PATH="$HOME/.cargo/bin:$PATH"
+                        fi
                         
-                        # 创建虚拟环境
-                        $PYTHON3_PATH -m venv venv
+                        # 显示 uv 版本
+                        uv --version
                         
-                        # 激活并安装所有检查工具
-                        . venv/bin/activate
-                        pip install -q --upgrade pip
-                        pip install -q flake8 black bandit pytest pytest-cov
+                        # 安装项目依赖（包括开发依赖）
+                        uv sync --all-extras
                         
                         echo "✅ Python 环境准备完成"
                     '''
@@ -97,8 +97,7 @@ pipeline {
                             // 严重错误会导致构建失败
                             def flake8Result = sh(
                                 script: '''
-                                    . venv/bin/activate
-                                    flake8 app/ --count --select=E9,F63,F7,F82 --show-source --statistics
+                                    uv run flake8 app/ --count --select=E9,F63,F7,F82 --show-source --statistics
                                 ''',
                                 returnStatus: true
                             )
@@ -117,13 +116,12 @@ pipeline {
                             // Black 格式问题只标记为 unstable，不阻止构建
                             def blackResult = sh(
                                 script: '''
-                                    . venv/bin/activate
-                                    black --check app/
+                                    uv run black --check app/
                                 ''',
                                 returnStatus: true
                             )
                             if (blackResult != 0) {
-                                unstable('⚠️ 代码格式不符合规范，建议运行: black app/')
+                                unstable('⚠️ 代码格式不符合规范，建议运行: uv run black app/')
                             }
                         }
                     }
@@ -136,8 +134,7 @@ pipeline {
                             // 高危安全问题会导致构建失败
                             def banditResult = sh(
                                 script: '''
-                                    . venv/bin/activate
-                                    bandit -r app/ -ll -f txt
+                                    uv run bandit -r app/ -ll -f txt
                                 ''',
                                 returnStatus: true
                             )
@@ -161,15 +158,12 @@ pipeline {
                 script {
                     def testResult = sh(
                         script: '''
-                            . venv/bin/activate
-                            pip install -q -r requirements.txt
-                            
                             # 创建测试目录
                             mkdir -p tests
                             
                             # 运行测试（如果测试文件存在）
                             if [ -d "tests" ] && [ "$(ls -A tests)" ]; then
-                                pytest tests/ --cov=app --cov-report=xml --cov-report=html --junitxml=test-results.xml
+                                uv run pytest tests/ --cov=app --cov-report=xml --cov-report=html --junitxml=test-results.xml
                             else
                                 echo "No tests found, skipping..."
                                 exit 0
@@ -319,8 +313,8 @@ pipeline {
                     # 清理旧容器
                     docker container prune -f || true
                     
-                    # 清理虚拟环境
-                    rm -rf venv
+                    # 清理虚拟环境（uv 创建的是 .venv）
+                    rm -rf .venv
                 '''
             }
         }
@@ -365,7 +359,7 @@ pipeline {
             cleanWs(
                 deleteDirs: true,
                 patterns: [
-                    [pattern: 'venv/', type: 'INCLUDE']
+                    [pattern: '.venv/', type: 'INCLUDE']
                 ]
             )
         }

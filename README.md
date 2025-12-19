@@ -2,6 +2,8 @@
 
 > 一个完整的 FastAPI 项目，配备 Jenkins CI/CD 流水线，用于学习和实践持续集成与持续部署。
 
+**⚡ 现已升级使用 [uv](https://docs.astral.sh/uv/) 包管理器！**
+
 ## 📋 项目特点
 
 - ✅ **完整 CI/CD 流程**：代码提交到自动部署
@@ -10,6 +12,7 @@
 - 🔍 **代码质量检查**：Flake8、Black、Bandit
 - 🧪 **自动化测试**：Pytest + 覆盖率报告
 - 📊 **严格质量门控**：测试失败阻止部署
+- ⚡ **uv 包管理**：极速依赖安装和管理
 
 ## 🏗️ 项目结构
 
@@ -25,15 +28,20 @@ deploy-fastapi/
 ├── docker-compose.yml
 ├── Jenkinsfile           # CI/CD 流水线
 ├── deploy.sh             # 部署脚本
-└── requirements.txt
+├── pyproject.toml        # 项目配置（uv）
+└── uv.lock               # 依赖锁定文件
 ```
 
 ## 🚀 快速开始
 
-### 1. 配置环境变量
+### 1. 安装 uv
 
 ```bash
-cp .env.example .env
+# Linux/macOS
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Windows (PowerShell)
+powershell -c "irm https://astral.sh/uv/install.ps1 | iex"
 ```
 
 ### 2. 启动应用
@@ -42,11 +50,9 @@ cp .env.example .env
 # 方式 A: Docker Compose（推荐）
 docker-compose up -d --build
 
-# 方式 B: 本地开发
-python -m venv venv
-venv\Scripts\activate  # Windows
-pip install -r requirements.txt
-cd app && python main.py
+# 方式 B: 本地开发（使用 uv）
+uv sync --all-extras  # 安装所有依赖
+uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
 ### 3. 访问应用
