@@ -3,11 +3,12 @@ FastAPI 应用主文件
 包含基础的 API 路由和健康检查接口
 """
 
+import os
+from datetime import datetime
+
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from datetime import datetime
-import os
 
 # 创建 FastAPI 应用实例
 app = FastAPI(
@@ -26,8 +27,11 @@ app.add_middleware(
 )
 
 
-# 数据模型
 class Item(BaseModel):
+    """
+    Item 模型
+    代表一个商品实体
+    """
     name: str
     description: str | None = None
     price: float
@@ -35,6 +39,10 @@ class Item(BaseModel):
 
 
 class MessageResponse(BaseModel):
+    """
+    MessageResponse 模型
+    用于返回消息响应
+    """
     message: str
     timestamp: str
     environment: str
